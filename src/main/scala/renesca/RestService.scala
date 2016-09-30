@@ -1,20 +1,19 @@
 package renesca
 
-import akka.http.scaladsl.marshalling.{Marshal, Marshaller, Marshalling, ToResponseMarshallable}
+import akka.http.scaladsl.marshalling.{Marshal}
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.{Authorization, BasicHttpCredentials, Location, RawHeader}
-import akka.util.{ByteString, Timeout}
+import akka.util.{Timeout}
 
 import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
-import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
+import akka.http.scaladsl.unmarshalling.{Unmarshal}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.stream.ActorMaterializer
 import akka.actor.ActorSystem
 import SprayJsonSupport._
-import akka.stream.scaladsl.Source
 
 case class TransactionId(id: String) {
   override def toString = id
