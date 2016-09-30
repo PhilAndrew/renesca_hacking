@@ -1,9 +1,9 @@
 package renesca
 
-import akka.http.scaladsl.marshalling.{Marshal, Marshalling, ToResponseMarshallable}
+import akka.http.scaladsl.marshalling.{Marshal, Marshaller, Marshalling, ToResponseMarshallable}
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.{Authorization, BasicHttpCredentials, Location, RawHeader}
-import akka.util.Timeout
+import akka.util.{ByteString, Timeout}
 
 import scala.collection.mutable
 import scala.concurrent.duration._
@@ -14,6 +14,7 @@ import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.stream.ActorMaterializer
 import akka.actor.ActorSystem
 import SprayJsonSupport._
+import akka.stream.scaladsl.Source
 
 case class TransactionId(id: String) {
   override def toString = id
@@ -36,7 +37,7 @@ class RestService(val server: String, credentials: Option[BasicHttpCredentials] 
 
   private def buildUri(path: String) = Uri(s"$server$path")
 
-  private def buildHttpPostRequest(path: String, jsonRequest: json.Request): Future[HttpResponse] = {
+  private def buildHttpPostRequest(path: String, jsonRequest: renesca.json.Request): Future[HttpResponse] = {
     val headers = new mutable.ListBuffer[HttpHeader]()
     //TODO: Accept: application/json; charset=UTF-8 - is this necessary?
     // val accept:MediaRange = `application/json`// withCharset `UTF-8`
@@ -48,29 +49,23 @@ class RestService(val server: String, credentials: Option[BasicHttpCredentials] 
 
     import SprayJsonSupport._
     import renesca.json.protocols.RequestJsonProtocol._
-
-    val m = Marshal(jsonRequest)
+    val marshal = Marshal(jsonRequest)
+    val requestEntity: RequestEntity = Await.result(marshal.to[RequestEntity], RestService.timeoutMilliseconds)
     val request = HttpRequest(
       method = HttpMethods.POST,
       uri = buildUri(path),
-      headers = headers.toList
-      //entity = HttpEntity(MediaTypes.`application/json`, "")
+      headers = headers.toList,
+      entity = requestEntity
     )
-    val z: Future[HttpResponse] = m.toResponseFor(request)
-    val z2: HttpResponse = Await.result(z, RestService.timeoutMilliseconds)
-    val json: String = Await.result(z2.entity.toStrict(RestService.timeoutMilliseconds).map( (e: HttpEntity.Strict) => {
-      e.data.decodeString("US-ASCII")
-    }), 10000 milliseconds)
-    val sendRequest = request.copy(entity = HttpEntity(MediaTypes.`application/json`, json))
-   pipeline(sendRequest)
+    pipeline(request)
   }
 
   private def awaitResponse(path: String, jsonRequest: json.Request): (List[HttpHeader], json.Response) = {
     val httpResponse = buildHttpPostRequest(path, jsonRequest)
     import renesca.json.protocols.ResponseJsonProtocol._
-    val httpResponse2: HttpResponse = Await.result(httpResponse, RestService.timeoutMilliseconds)  //awaitResponse(httpRequest)
+    val httpResponse2: HttpResponse = Await.result(httpResponse, RestService.timeoutMilliseconds)
     val s = Await.result(Unmarshal(httpResponse2.entity).to[String], RestService.timeoutMilliseconds)
-    val responseFuture: Future[json.Response] = Unmarshal(httpResponse2.entity).to[json.Response] //.toStrict(30000 milliseconds).map((f: HttpEntity.Strict) => f.data)
+    val responseFuture: Future[json.Response] = Unmarshal(httpResponse2.entity).to[json.Response]
     val jsonResponse: json.Response = Await.result(responseFuture, RestService.timeoutMilliseconds)
     //TODO: error handling
     (httpResponse2.headers.toList, jsonResponse)
