@@ -49,15 +49,15 @@ class RestService(val server: String, credentials: Option[BasicHttpCredentials] 
 
     import SprayJsonSupport._
     import renesca.json.protocols.RequestJsonProtocol._
-    val marshal = Marshal(jsonRequest)
-    val requestEntity: RequestEntity = Await.result(marshal.to[RequestEntity], RestService.timeoutMilliseconds)
-    val request = HttpRequest(
-      method = HttpMethods.POST,
-      uri = buildUri(path),
-      headers = headers.toList,
-      entity = requestEntity
-    )
-    pipeline(request)
+
+    Marshal(jsonRequest).to[RequestEntity].map( (e) => {
+      HttpRequest(
+        method = HttpMethods.POST,
+        uri = buildUri(path),
+        headers = headers.toList,
+        entity = e
+      )
+    }).flatMap(pipeline)
   }
 
   private def awaitResponse(path: String, jsonRequest: json.Request): (List[HttpHeader], json.Response) = {
