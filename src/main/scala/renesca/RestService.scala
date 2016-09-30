@@ -63,12 +63,15 @@ class RestService(val server: String, credentials: Option[BasicHttpCredentials] 
   private def awaitResponse(path: String, jsonRequest: json.Request): (List[HttpHeader], json.Response) = {
     val httpResponse = buildHttpPostRequest(path, jsonRequest)
     import renesca.json.protocols.ResponseJsonProtocol._
-    val httpResponse2: HttpResponse = Await.result(httpResponse, RestService.timeoutMilliseconds)
-    val s = Await.result(Unmarshal(httpResponse2.entity).to[String], RestService.timeoutMilliseconds)
-    val responseFuture: Future[json.Response] = Unmarshal(httpResponse2.entity).to[json.Response]
-    val jsonResponse: json.Response = Await.result(responseFuture, RestService.timeoutMilliseconds)
+
+    val responseFuture = for (response <- httpResponse;
+         stringResponse <- Unmarshal(response.entity).to[String];
+         jsonResponse <- Unmarshal(stringResponse).to[json.Response]) yield (response.headers, jsonResponse)
+
+    val response = Await.result(responseFuture, RestService.timeoutMilliseconds)
     //TODO: error handling
-    (httpResponse2.headers.toList, jsonResponse)
+
+    (response._1.toList, response._2)
   }
 
   def singleRequest(jsonRequest: json.Request): json.Response = {
