@@ -15,12 +15,23 @@ import akka.stream.ActorMaterializer
 import akka.actor.ActorSystem
 import SprayJsonSupport._
 
+/**
+  * Notes:
+  *
+  * This code was changed convert it from Spray to Akka HTTP, it is mostly consistent with the previous version
+  * except for the error handling which is not consistent as I am not sure how to make the same error handling using
+  * the Akka http API code as it used to use the Spray code.
+  *
+  * Blocking is evil.
+  * Await.result should be changed so that we return a Future[_] rather than blocking to wait for a response then
+  * in code calling this we should deal with Future[_]'s.
+  *
+  * actorSystem: ActorSystem and materializer should be implicit parameters as we may not want to have a completely
+  * independent ActorSystem here, we may want to use the globally used ActorSystem from within the program.
+  */
+
 case class TransactionId(id: String) {
   override def toString = id
-}
-
-object RestService {
-  val timeoutMilliseconds = 30000 milliseconds
 }
 
 class RestService(val server: String, credentials: Option[BasicHttpCredentials] = None, implicit val timeout: Timeout = Timeout(60.seconds)) {
@@ -31,7 +42,11 @@ class RestService(val server: String, credentials: Option[BasicHttpCredentials] 
   // dispatcher provides execution context
   import actorSystem.dispatcher
 
-  //val pipeline: HttpRequest => Future[HttpResponse] = sendReceive
+  implicit val materializer = ActorMaterializer()
+  val http = Http()
+
+  def pipeline(r: HttpRequest) = http.singleRequest(r)
+
   private def awaitResponse(request: HttpRequest): HttpResponse = Await.result(pipeline(request), timeout.duration)
 
   private def buildUri(path: String) = Uri(s"$server$path")
@@ -64,12 +79,14 @@ class RestService(val server: String, credentials: Option[BasicHttpCredentials] 
     import renesca.json.protocols.ResponseJsonProtocol._
 
     val responseFuture = for (response <- httpResponse;
-         stringResponse <- Unmarshal(response.entity).to[String];
-         jsonResponse <- Unmarshal(stringResponse).to[json.Response]) yield (response.headers, jsonResponse)
+                              // You can Unmarshal to a [String] if you want to see the JSON result
+                              jsonResponse <- Unmarshal(response.entity).to[json.Response]) yield (response.headers, jsonResponse)
 
-    val response = Await.result(responseFuture, RestService.timeoutMilliseconds)
-    //TODO: error handling
+    // Note the error handling is not consistent with the previous Spray code
+    // case Left(deserializationError) => throw new RuntimeException(s"Deserialization Error: $deserializationError\n\n${ httpResponse.entity.asString }")
 
+    // @todo Blocking is evil, return Future[_] rather than doing this
+    val response = Await.result(responseFuture, timeout.duration)
     (response._1.toList, response._2)
   }
 
@@ -104,11 +121,6 @@ class RestService(val server: String, credentials: Option[BasicHttpCredentials] 
     val (_, jsonResponse) = awaitResponse(path, jsonRequest)
     jsonResponse
   }
-
-  implicit val materializer = ActorMaterializer()  // @todo Added by Philip, should use this?
-  val http = Http()
-
-  def pipeline(r: HttpRequest) = http.singleRequest(r)
 
   def rollbackTransaction(id: TransactionId) {
     // we don't wait for a response here
