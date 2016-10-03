@@ -10,10 +10,8 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import akka.http.scaladsl.unmarshalling.{Unmarshal}
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.stream.ActorMaterializer
 import akka.actor.ActorSystem
-import SprayJsonSupport._
 
 /**
   * Notes:
@@ -61,22 +59,26 @@ class RestService(val server: String, credentials: Option[BasicHttpCredentials] 
     // http://neo4j.com/docs/2.2.3/rest-api-streaming.html
     headers += RawHeader("X-Stream", "true")
 
-    import SprayJsonSupport._
-    import renesca.json.protocols.RequestJsonProtocol._
+    //import SprayJsonSupport._
+    //import renesca.json.protocols.RequestJsonProtocol._
 
-    Marshal(jsonRequest).to[RequestEntity].map( (e) => {
+    // @todo Philip .to[RequestEntity]
+    /*Marshal(jsonRequest).to[String].map( (e) => {
       HttpRequest(
         method = HttpMethods.POST,
         uri = buildUri(path),
         headers = headers.toList,
-        entity = e
+        entity = ""
       )
-    }).flatMap(pipeline)
+    }).flatMap(pipeline)*/
+    null
   }
 
   private def awaitResponse(path: String, jsonRequest: json.Request): (List[HttpHeader], json.Response) = {
     val httpResponse = buildHttpPostRequest(path, jsonRequest)
-    import renesca.json.protocols.ResponseJsonProtocol._
+
+    // @todo Philip
+/*    import renesca.json.protocols.ResponseJsonProtocol._
 
     val responseFuture = for (response <- httpResponse;
                               // You can Unmarshal to a [String] if you want to see the JSON result
@@ -87,7 +89,9 @@ class RestService(val server: String, credentials: Option[BasicHttpCredentials] 
 
     // @todo Blocking is evil, return Future[_] rather than doing this
     val response = Await.result(responseFuture, timeout.duration)
-    (response._1.toList, response._2)
+    (response._1.toList, response._2)*/
+
+    null
   }
 
   def singleRequest(jsonRequest: json.Request): json.Response = {
