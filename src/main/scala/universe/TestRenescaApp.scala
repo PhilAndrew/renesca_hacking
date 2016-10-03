@@ -4,7 +4,7 @@ package universe
 //: Copyright © 2016 Philip Andrew https://github.com/PhilAndrew  All Rights Reserved.
 //: ----------------------------------------------------------------------------------
 
-
+/*
 import akka.http.scaladsl.model.headers.BasicHttpCredentials
 import renesca.graph.{Node, Relation}
 import renesca.parameter._
@@ -115,3 +115,4 @@ object TestRenescaApp extends App {
   // shut down actor system
   restService.actorSystem.terminate()
 }
+*/

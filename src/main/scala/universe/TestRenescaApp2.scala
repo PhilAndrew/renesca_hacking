@@ -30,7 +30,7 @@ object ExampleSchemaWrapping {
 object TestRenescaApp2 extends App {
 
   ExampleJson.test()
-/*
+
   // set up database connection
   val credentials = BasicHttpCredentials("neo4j", "password")
   // RestService contains an ActorSystem to handle HTTP communication via spray-client
@@ -61,6 +61,6 @@ object TestRenescaApp2 extends App {
 
   // shut down actor system
   //restService.actorSystem.shutdown()
-*/
+
 }
 

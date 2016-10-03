@@ -6,14 +6,161 @@ import renesca.json.{Request, Statement}
 object ExampleJson {
 
   def test() = {
-    val request = Request(List(Statement(statement = "", parameters = None, resultDataContents = Some(List("what")))))
+    val request = Request(List(Statement(statement = "", parameters = None, resultDataContents = Some(List("graph")))))
     val json = RequestJson.jsonOf(request)
     println(json)
-
+// {"statements":[{"statement":"","resultDataContents":["what"]}]}
   }
 
 
+/*
+Multiple main classes detected, select one to run:
 
+ [1] universe.TestRenescaApp
+ [2] universe.TestRenescaApp2
+
+Enter number: 1
+
+[info] Running universe.TestRenescaApp
+
+
+{"statements":[{"statement":"match (n) optional match (n)-[r]-() return n,r","re
+sultDataContents":["graph"]}]}
+
+FulfilledFuture({"results":[{"columns":["n","r"],"data":[]}],"errors":[]})
+
+### extractGraphs
+List(Result(List(n, r),List()))
+
+
+{"statements":[{"statement":"CREATE (:ANIMAL {name:'snake'})-[:EATS]->(:ANIMAL {
+name:'dog'})"}]}
+
+FulfilledFuture({"results":[{"columns":[],"data":[]}],"errors":[]})
+
+
+
+{"statements":[{"statement":"MATCH (n:ANIMAL)-[r]->() RETURN n,r","resultDataCon
+tents":["graph"]}]}
+
+FulfilledFuture({"commit":"http://192.168.9.131:7474/db/data/transaction/306/com
+mit","results":[{"columns":["n","r"],"data":[{"graph":{"nodes":[{"id":"116","lab
+els":["ANIMAL"],"properties":{"name":"snake"}},{"id":"117","labels":["ANIMAL"],"
+properties":{"name":"dog"}}],"relationships":[{"id":"89","type":"EATS","startNod
+e":"116","endNode":"117","properties":{}}]}}]}],"transaction":{"expires":"Mon, 0
+3 Oct 2016 13:13:30 +0000"},"errors":[]})
+
+### extractGraphs
+List(Result(List(n, r),List(Data(None,Some(Graph(List(Node(116,List(ANIMAL),Map(
+name -> snake)), Node(117,List(ANIMAL),Map(name -> dog))),List(Relationship(89,E
+ATS,116,117,Map()))))))))
+Name of one snake neighbour: dog
+
+
+{"statements":[{"statement":"match (V0) where id(V0) = {V0_itemId} set V0 += {V0
+_propertyAdditions}  set V0:`REPTILE` ","parameters":{"V0_itemId":116,"V0_proper
+tyAdditions":{"hungry":true}},"resultDataContents":["row","graph"]},{"statement"
+:"create (V0 :`ANIMAL` {V0_properties})  return V0","parameters":{"V0_properties
+":{"name":"hippo"}},"resultDataContents":["row","graph"]}]}
+
+FulfilledFuture({"commit":"http://192.168.9.131:7474/db/data/transaction/306/com
+mit","results":[{"columns":[],"data":[]},{"columns":["V0"],"data":[{"row":[{"nam
+e":"hippo"}],"meta":[{"id":118,"type":"node","deleted":false}],"graph":{"nodes":
+[{"id":"118","labels":["ANIMAL"],"properties":{"name":"hippo"}}],"relationships"
+:[]}}]}],"transaction":{"expires":"Mon, 03 Oct 2016 13:13:30 +0000"},"errors":[]
+})
+
+### extractGraphs
+List(Result(List(),List()), Result(List(V0),List(Data(Some(ArraySeq(Map(name ->
+hippo))),Some(Graph(List(Node(118,List(ANIMAL),Map(name -> hippo))),List()))))))
+
+
+
+{"statements":[{"statement":"match (V0) where id(V0) = {V0_nodeId} match (V1) wh
+ere id(V1) = {V1_nodeId} create (V0)-[V2 :`EATS` {V2_properties}]->(V1)  return
+V2","parameters":{"V0_nodeId":116,"V2_properties":{},"V1_nodeId":118},"resultDat
+aContents":["row","graph"]}]}
+
+FulfilledFuture({"commit":"http://192.168.9.131:7474/db/data/transaction/306/com
+mit","results":[{"columns":["V2"],"data":[{"row":[{}],"meta":[{"id":90,"type":"r
+elationship","deleted":false}],"graph":{"nodes":[{"id":"116","labels":["ANIMAL",
+"REPTILE"],"properties":{"hungry":true,"name":"snake"}},{"id":"118","labels":["A
+NIMAL"],"properties":{"name":"hippo"}}],"relationships":[{"id":"90","type":"EATS
+","startNode":"116","endNode":"118","properties":{}}]}}]}],"transaction":{"expir
+es":"Mon, 03 Oct 2016 13:13:30 +0000"},"errors":[]})
+
+### extractGraphs
+List(Result(List(V2),List(Data(Some(ArraySeq(Map())),Some(Graph(List(Node(116,Li
+st(ANIMAL, REPTILE),Map(hungry -> true, name -> snake)), Node(118,List(ANIMAL),M
+ap(name -> hippo))),List(Relationship(90,EATS,116,118,Map()))))))))
+
+
+{"statements":[]}
+
+FulfilledFuture({"results":[],"errors":[]})
+
+
+
+{"statements":[{"statement":"MATCH (n:ANIMAL {name: {name}}) return n","paramete
+rs":{"name":"hippo"},"resultDataContents":["graph"]}]}
+
+FulfilledFuture({"commit":"http://192.168.9.131:7474/db/data/transaction/307/com
+mit","results":[{"columns":["n"],"data":[{"graph":{"nodes":[{"id":"118","labels"
+:["ANIMAL"],"properties":{"name":"hippo"}}],"relationships":[]}}]}],"transaction
+":{"expires":"Mon, 03 Oct 2016 13:13:30 +0000"},"errors":[]})
+
+### extractGraphs
+List(Result(List(n),List(Data(None,Some(Graph(List(Node(118,List(ANIMAL),Map(nam
+e -> hippo))),List()))))))
+
+
+{"statements":[{"statement":"match (V0) where id(V0) = {V0_itemId} set V0 += {V0
+_propertyAdditions}   ","parameters":{"V0_itemId":118,"V0_propertyAdditions":{"n
+ose":true}},"resultDataContents":["row","graph"]}]}
+
+FulfilledFuture({"commit":"http://192.168.9.131:7474/db/data/transaction/307/com
+mit","results":[{"columns":[],"data":[]}],"transaction":{"expires":"Mon, 03 Oct
+2016 13:13:30 +0000"},"errors":[]})
+
+### extractGraphs
+List(Result(List(),List()))
+
+
+{"statements":[]}
+
+FulfilledFuture({"results":[],"errors":[]})
+
+
+
+{"statements":[{"statement":"MATCH (n:ANIMAL {name: \"hippo\"}) OPTIONAL MATCH (
+n)-[r]-() DELETE n,r"}]}
+
+FulfilledFuture({"commit":"http://192.168.9.131:7474/db/data/transaction/308/com
+mit","results":[{"columns":[],"data":[]}],"transaction":{"expires":"Mon, 03 Oct
+2016 13:13:30 +0000"},"errors":[]})
+
+
+
+{"statements":[{"statement":"MATCH (n:ANIMAL) OPTIONAL MATCH (n)-[r:EATS]->()\r\
+n    RETURN n.name as name, COUNT(r) as eatcount","resultDataContents":["row"]}]
+}
+
+FulfilledFuture({"results":[{"columns":["name","eatcount"],"data":[{"row":["dog"
+,0],"meta":[null,null]},{"row":["snake",2],"meta":[null,null]},{"row":["hippo",0
+],"meta":[null,null]}]}],"errors":[]})
+
+
+name    eatcount
+dog     0
+snake   2
+hippo   0
+
+hungriest: snake
+
+
+{"statements":[{"statement":"MATCH (n) OPTIONAL MATCH (n)-[r]-() DELETE n,r"}]}
+
+ */
 
 
 

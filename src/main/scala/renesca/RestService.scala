@@ -1,17 +1,18 @@
 package renesca
 
-import akka.http.scaladsl.marshalling.{Marshal}
+import akka.http.scaladsl.marshalling.Marshal
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.{Authorization, BasicHttpCredentials, Location, RawHeader}
-import akka.util.{Timeout}
+import akka.util.{ByteString, Timeout}
 
 import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
-import akka.http.scaladsl.unmarshalling.{Unmarshal}
+import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.http.scaladsl.Http
 import akka.stream.ActorMaterializer
 import akka.actor.ActorSystem
+import renesca.json.protocols.RequestJson
 
 /**
   * Notes:
@@ -62,6 +63,21 @@ class RestService(val server: String, credentials: Option[BasicHttpCredentials] 
     //import SprayJsonSupport._
     //import renesca.json.protocols.RequestJsonProtocol._
 
+    println("Should request")
+    val json = RequestJson.jsonOf(jsonRequest)
+    println(json)
+
+    //val requestEntity = FormData(Map("name" -> "value")).toEntity
+
+    val r = HttpRequest(
+      method = HttpMethods.POST,
+      uri = buildUri(path),
+      headers = headers.toList,
+      entity = HttpEntity.Strict(MediaTypes.`application/json`, ByteString(json))
+    )
+    pipeline(r)
+
+
     // @todo Philip .to[RequestEntity]
     /*Marshal(jsonRequest).to[String].map( (e) => {
       HttpRequest(
@@ -71,16 +87,21 @@ class RestService(val server: String, credentials: Option[BasicHttpCredentials] 
         entity = ""
       )
     }).flatMap(pipeline)*/
-    null
   }
 
   private def awaitResponse(path: String, jsonRequest: json.Request): (List[HttpHeader], json.Response) = {
     val httpResponse = buildHttpPostRequest(path, jsonRequest)
 
+    val responseFuture = for (response <- httpResponse) yield (response)
+    val response = Await.result(responseFuture, timeout.duration)
+    response.entity.toStrict(10000 milliseconds).map((r) => {
+      println("RESPONSE")
+      println(r.toString())
+    })
     // @todo Philip
-/*    import renesca.json.protocols.ResponseJsonProtocol._
+    import renesca.json.protocols.ResponseJsonProtocol._
 
-    val responseFuture = for (response <- httpResponse;
+/*    val responseFuture = for (response <- httpResponse;
                               // You can Unmarshal to a [String] if you want to see the JSON result
                               jsonResponse <- Unmarshal(response.entity).to[json.Response]) yield (response.headers, jsonResponse)
 
@@ -91,7 +112,7 @@ class RestService(val server: String, credentials: Option[BasicHttpCredentials] 
     val response = Await.result(responseFuture, timeout.duration)
     (response._1.toList, response._2)*/
 
-    null
+    (List[HttpHeader](), null)
   }
 
   def singleRequest(jsonRequest: json.Request): json.Response = {
