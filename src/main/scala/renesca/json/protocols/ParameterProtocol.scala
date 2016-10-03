@@ -1,5 +1,31 @@
 package renesca.json.protocols
 
+import renesca.parameter.{LongPropertyValue, PropertyKey}
+
+object ParameterProtocol {
+
+  object JsonPropertyKeyFormat {
+    def toJson(obj: PropertyKey): String = {
+      obj.name
+    }
+
+    def fromJson(str: String): PropertyKey = {
+      PropertyKey(str)
+    }
+  }
+/*
+  object JsonPrimitivePropertyValueFormat {
+    def toJson(obj: LongPropertyValue): String = {
+      obj.value.toString
+    }
+
+    def fromJson(str: String): LongPropertyValue = {
+      LongPropertyValue(str.toLong)
+    }
+  }*/
+}
+
+/*
 import renesca.parameter._
 import spray.json._
 
@@ -89,3 +115,4 @@ object ParameterProtocol extends DefaultJsonProtocol {
   }
 
 }
+*/
