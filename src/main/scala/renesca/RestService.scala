@@ -75,7 +75,7 @@ class RestService(val server: String, credentials: Option[BasicHttpCredentials] 
     ResponseJson.jsonToObject(jsonResponse)
   }
 
-  private def awaitResponse(path: String, jsonRequest: json.Request): (List[HttpHeader], json.Response) = {
+  private def awaitResponse(path: String, jsonRequest: json.Request): Future[(List[HttpHeader], json.Response)] = {
     val httpResponse = buildHttpPostRequest(path, jsonRequest)
 
     val responseFuture: Future[(Seq[HttpHeader],json.Response)] = for (response <- httpResponse;
@@ -91,40 +91,43 @@ class RestService(val server: String, credentials: Option[BasicHttpCredentials] 
     // case Left(deserializationError) => throw new RuntimeException(s"Deserialization Error: $deserializationError\n\n${ httpResponse.entity.asString }")
 
     // @todo Blocking is evil, return Future[_] rather than doing this
-    val response = Await.result(responseFuture, timeout.duration)
-    (response._1.toList, response._2)
+    //val response = Await.result(responseFuture, timeout.duration)
+    //(response._1.toList, response._2)
+    responseFuture.map( (r) => (r._1.toList, r._2))
   }
 
-  def singleRequest(jsonRequest: json.Request): json.Response = {
+  def singleRequest(jsonRequest: json.Request): Future[json.Response] = {
     val path = "/db/data/transaction/commit"
-    val (_, jsonResponse) = awaitResponse(path, jsonRequest)
-    jsonResponse
+    awaitResponse(path, jsonRequest).map( (r) => r._2)
   }
 
-  def openTransaction(jsonRequest: json.Request = json.Request()): (TransactionId, json.Response) = {
+  def openTransaction(jsonRequest: json.Request = json.Request()): Future[(TransactionId, json.Response)] = {
     val path = "/db/data/transaction"
-    val (headers, jsonResponse) = awaitResponse(path, jsonRequest)
-    val uris = headers.collectFirst({ case Location(uri) => uri })
-    val optionId = for(uri <- uris) yield {
-      uri.path.reverse.head.toString
-    }
 
-    optionId match {
-      case Some(id) => (TransactionId(id), jsonResponse)
-      case None     => throw new RuntimeException("Cannot get transaction id")
-    }
+    awaitResponse(path, jsonRequest).map( (r) => {
+      val headers = r._1
+      val jsonResponse = r._2
+
+      val uris = headers.collectFirst({ case Location(uri) => uri })
+      val optionId = for(uri <- uris) yield {
+        uri.path.reverse.head.toString
+      }
+
+      optionId match {
+        case Some(id) => (TransactionId(id), jsonResponse)
+        case None     => throw new RuntimeException("Cannot get transaction id")
+      }
+    })
   }
 
-  def resumeTransaction(id: TransactionId, jsonRequest: json.Request): json.Response = {
+  def resumeTransaction(id: TransactionId, jsonRequest: json.Request): Future[json.Response] = {
     val path = s"/db/data/transaction/$id"
-    val (_, jsonResponse) = awaitResponse(path, jsonRequest)
-    jsonResponse
+    awaitResponse(path, jsonRequest).map( (r) => r._2)
   }
 
-  def commitTransaction(id: TransactionId, jsonRequest: json.Request = json.Request()): json.Response = {
+  def commitTransaction(id: TransactionId, jsonRequest: json.Request = json.Request()): Future[json.Response] = {
     val path = s"/db/data/transaction/$id/commit"
-    val (_, jsonResponse) = awaitResponse(path, jsonRequest)
-    jsonResponse
+    awaitResponse(path, jsonRequest).map( (r) => r._2)
   }
 
   def rollbackTransaction(id: TransactionId) {

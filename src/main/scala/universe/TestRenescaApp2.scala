@@ -33,7 +33,7 @@ object TestRenescaApp2 extends App {
 
       // only proceed if database is available and empty
       import scala.concurrent.duration._
-      val wholeGraph = db.queryWholeGraph
+      val wholeGraph = Await.result(db.queryWholeGraph, 100000 milliseconds)
       if (wholeGraph.nonEmpty) {
         //restService.actorSystem.shutdown()
         sys.error("Database is not empty.")
@@ -83,7 +83,7 @@ object TestRenescaApp2 extends App {
         }
 
         import ExampleSchemaSubgraph._
-        val zoo = Zoo(db.queryGraph("MATCH (a:ANIMAL)-[e:EATS]->(f:FOOD) RETURN a,e,f"))
+        val zoo = Zoo(Await.result(db.queryGraph("MATCH (a:ANIMAL)-[e:EATS]->(f:FOOD) RETURN a,e,f"), 10000 milliseconds))
         println("Zoo is -------------------------------------------------------------------------")
         println(zoo.toString)
 
