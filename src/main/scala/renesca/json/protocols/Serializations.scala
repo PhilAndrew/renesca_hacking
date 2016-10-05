@@ -21,14 +21,14 @@ class PropertyKeySerializer() extends CustomKeySerializer[PropertyKey](format =>
 }))
 
 class PropertyValueSerializer() extends CustomSerializer[PropertyValue](format => ( {
-  case JString(s) => { StringPropertyValue(s) }
-  case JDouble(s) => { DoublePropertyValue(s) }
+  case JString(s) => StringPropertyValue(s)
+  case JDouble(s) => DoublePropertyValue(s)
 
-  case JDecimal(s) => { LongPropertyValue(s.toLong) }
-  case JLong(s) => { LongPropertyValue(s.toLong) }
-  case JInt(s) => { LongPropertyValue(s.toLong) }
+  case JDecimal(s) => LongPropertyValue(s.toLong)
+  case JLong(s) => LongPropertyValue(s.toLong)
+  case JInt(s) => LongPropertyValue(s.toLong)
 
-  case JBool(s)   => { BooleanPropertyValue(s) }
+  case JBool(s)   => BooleanPropertyValue(s)
 }, {
   case _ => null
 })) {
@@ -39,17 +39,17 @@ object ParameterMapSerializer {
     it match {
       case MapParameterValue(v) => new JObject(v.toList.map((f) => { (f._1.name, {
         f._2 match {
-          case LongPropertyValue(v) => { JLong(v) }
-          case StringPropertyValue(v) => { JString(v) }
-          case DoublePropertyValue(v) => { JDouble(v) }
-          case BooleanPropertyValue(v) => { JBool(v) }
+          case LongPropertyValue(v) => JLong(v)
+          case StringPropertyValue(v) => JString(v)
+          case DoublePropertyValue(v) => JDouble(v)
+          case BooleanPropertyValue(v) => JBool(v)
           case NullPropertyValue => JNull
         }
       })}))
-      case LongPropertyValue(v) => { new JLong(v) }
-      case StringPropertyValue(v) => { new JString(v) }
-      case DoublePropertyValue(v) => { new JDouble(v) }
-      case BooleanPropertyValue(v) => { new JBool(v) }
+      case LongPropertyValue(v) => JLong(v)
+      case StringPropertyValue(v) => JString(v)
+      case DoublePropertyValue(v) => JDouble(v)
+      case BooleanPropertyValue(v) => JBool(v)
       case NullPropertyValue => JNull
     }
   }
