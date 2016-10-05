@@ -5,7 +5,7 @@ import renesca.parameter._
 import renesca.parameter.implicits._
 import renesca.table.Table
 
-import scala.collection.mutable
+import scala.collection.{SeqView, mutable}
 import scala.concurrent.{Await, Future}
 
 case class QueryConfig(item: SubGraph, query: Query, callback: (Graph, Table) => Either[String, () => Any] = (graph: Graph, table: Table) => Right(() => ()))
@@ -561,15 +561,18 @@ class QueryBuilder {
   }
 
   def applyQueries(queryRequests: Seq[() => Seq[QueryConfig]], queryHandler: (Seq[Query]) => Future[Seq[(Graph, Table)]]): Future[Option[String]] = {
-    val handles = queryRequests.view.flatMap(getter => {
+    // @todo PHILIP do this one?
+
+    val handles: SeqView[Future[Seq[_]], Seq[_]] = queryRequests.view.map(getter => {
       val configs = getter()
       if (configs.isEmpty)
-        Seq.empty
+        Future.successful(Seq.empty) // @todo successful?
       else {
         val (queries, callbacks) = configs.map(c => (c.query, c.callback)).unzip
-        import scala.concurrent.duration._
-        val q = Await.result(queryHandler(queries), 30000 milliseconds)
-        q.zip(callbacks).view.map { case ((g, t), f) => f(g, t) }
+        val queryFuture = queryHandler(queries)
+        val d: Future[Seq[_]] = queryFuture.map( (q) => q.zip(callbacks).view.map { case ((g, t), f) => f(g, t) })
+        d
+        //q.zip(callbacks).view.map { case ((g, t), f) => f(g, t) }
       }
     })
 
@@ -584,63 +587,4 @@ class QueryBuilder {
 
     Future.successful(failure)
   }
-
-  /*
-    // @todo PHILIP maybe we need to apply in sequence
-    val handlesBefore: Seq[Future[Seq[Either[String, _]]]] = queryRequests.view.map((getter: (() => Seq[QueryConfig])) => {
-      val configs = getter()
-      if (configs.isEmpty)
-        Future.successful(Seq.empty)
-      else {
-        val (queries: Seq[Query], callbacks: Seq[_]) = configs.map(c => (c.query, c.callback)).unzip
-        val r = queryHandler(queries).map( (q: Seq[(Graph, Table)]) => {
-          val view: SeqView[((renesca.graph.Graph, renesca.table.Table), (renesca.graph.Graph, renesca.table.Table) => Either[String, () => Any]), Seq[_]] = q.zip(callbacks).view
-          view.map { case ((g, t), f) => f(g, t) } })
-          r
-
-          //})//.map { case ((g, t), f) => f(g, t) } )
-
-    // @todo Note Philip, this executes the futures IN PARALLEL, NOT IN SEQUENCE
-    val handles: Future[Seq[_]] = Future.sequence(handlesBefore).map(_.flatten)
-
-    handles.map((f) => Some("successful PHILIP?"))
-      }
-    })*/
-
-  /*
-      var failure: Option[String] = None
-      val successHandles = handles.takeWhile(h => {
-        failure = h.left.toOption
-        failure.isEmpty
-      }).force
-
-      if(failure.isEmpty)
-        successHandles.foreach(_.right.get())
-
-      failure*/
-
-
-  /*
-  def applyQueries(queryRequests: Seq[() => Seq[QueryConfig]], queryHandler: (Seq[Query]) => Seq[(Graph, Table)]): Option[String] = {
-    val handles = queryRequests.view.flatMap(getter => {
-      val configs = getter()
-      if (configs.isEmpty)
-        Seq.empty
-      else {
-        val (queries, callbacks) = configs.map(c => (c.query, c.callback)).unzip
-        queryHandler(queries).zip(callbacks).view.map { case ((g, t), f) => f(g, t) }
-      }
-    })
-
-    var failure: Option[String] = None
-    val successHandles = handles.takeWhile(h => {
-      failure = h.left.toOption
-      failure.isEmpty
-    }).force
-
-    if(failure.isEmpty)
-      successHandles.foreach(_.right.get())
-
-    failure
-  }*/
 }

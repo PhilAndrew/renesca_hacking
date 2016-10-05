@@ -34,11 +34,7 @@ case class TransactionId(id: String) {
 }
 
 class RestService(val server: String, credentials: Option[BasicHttpCredentials] = None, implicit val timeout: Timeout = Timeout(60.seconds)) {
-  // http://spray.io/documentation/1.2.2/spray-can/http-client/request-level/
-  // http://spray.io/documentation/1.2.2/spray-client/
   implicit val actorSystem: ActorSystem = ActorSystem()
-
-  // dispatcher provides execution context
   import actorSystem.dispatcher
 
   implicit val materializer = ActorMaterializer()
@@ -62,13 +58,13 @@ class RestService(val server: String, credentials: Option[BasicHttpCredentials] 
 
     val json = RequestJson.jsonOf(jsonRequest)
 
-    val r = HttpRequest(
+    val request = HttpRequest(
       method = HttpMethods.POST,
       uri = buildUri(path),
       headers = headers.toList,
       entity = HttpEntity.Strict(MediaTypes.`application/json`, ByteString(json))
     )
-    pipeline(r)
+    pipeline(request)
   }
 
   def parseJson(jsonResponse: String): json.Response = {
@@ -79,20 +75,11 @@ class RestService(val server: String, credentials: Option[BasicHttpCredentials] 
     val httpResponse = buildHttpPostRequest(path, jsonRequest)
 
     val responseFuture: Future[(Seq[HttpHeader],json.Response)] = for (response <- httpResponse;
-                              // You can Unmarshal to a [String] if you want to see the JSON result
-                              jsonResponse <- {
-                                val r = Unmarshal(response.entity).to[String]
-                                r
-                              }) yield (response.headers, parseJson({
-      jsonResponse
-    }))
+                              jsonResponse <- Unmarshal(response.entity).to[String]) yield (response.headers, parseJson(jsonResponse))
 
-    // Note the error handling is not consistent with the previous Spray code
+    // @todo Note the error handling is not consistent with the previous Spray code
     // case Left(deserializationError) => throw new RuntimeException(s"Deserialization Error: $deserializationError\n\n${ httpResponse.entity.asString }")
 
-    // @todo Blocking is evil, return Future[_] rather than doing this
-    //val response = Await.result(responseFuture, timeout.duration)
-    //(response._1.toList, response._2)
     responseFuture.map( (r) => (r._1.toList, r._2))
   }
 
@@ -130,10 +117,10 @@ class RestService(val server: String, credentials: Option[BasicHttpCredentials] 
     awaitResponse(path, jsonRequest).map( (r) => r._2)
   }
 
-  def rollbackTransaction(id: TransactionId) {
+  def rollbackTransaction(id: TransactionId): Future[Unit] = {
     // we don't wait for a response here
     val path = s"/db/data/transaction/$id"
-    pipeline(HttpRequest(HttpMethods.DELETE, buildUri(path)))
+    pipeline(HttpRequest(HttpMethods.DELETE, buildUri(path))).map(f => Unit)
   }
 
   override def toString = s"RestService($server${ if(credentials.isDefined) " with credentials" else "" }, $timeout)"
