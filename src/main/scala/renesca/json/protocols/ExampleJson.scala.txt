@@ -253,7 +253,7 @@ hungriest: snake
 
   def testIt() = {
 
-    implicit val formats = Serialization.formats(NoTypeHints) + new PropertyKeySerializer() + new ParameterValueSerializer() + new PropertyValueSerializer()
+    implicit val formats = Serialization.formats(NoTypeHints) + new PropertyKeySerializer() + new PropertyValueSerializer()
 
     val json = """{
                  |   "results":[
