@@ -1,20 +1,25 @@
 
 name := "renesca"
 
-version := "1.4"
+version := "1.5"
 
 scalaVersion := "2.11.8"
 
 val paradiseVersion = "2.1.0"
 
-libraryDependencies += "com.github.renesca" %% "renesca-magic" % "0.3.4-1"
-
 addCompilerPlugin("org.scalamacros" % "paradise" % paradiseVersion cross CrossVersion.full)
 
+// START: This part is to use Renesca Magic to compile macros and should not create any output to the bundle.
+// http://stackoverflow.com/questions/21515325/add-a-compile-time-only-dependency-in-sbt
+ivyConfigurations += config("compileonly").hide
 
-//libraryDependencies += "io.spray" %% "spray-client" % "1.3.3"
+libraryDependencies ++= Seq(
+  "com.github.renesca" % "renesca-magic_2.11" % "0.3.4-1" % "compileonly"
+)
 
-//libraryDependencies += "io.spray" %% "spray-json" % "1.3.2"
+// appending everything from 'compileonly' to unmanagedClasspath
+unmanagedClasspath in Compile ++=
+  update.value.select(configurationFilter("compileonly"))
 
 val akkaVersion = "2.4.10"
 

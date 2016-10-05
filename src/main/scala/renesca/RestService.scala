@@ -12,7 +12,7 @@ import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.http.scaladsl.Http
 import akka.stream.ActorMaterializer
 import akka.actor.ActorSystem
-import renesca.json.protocols.RequestJson
+import renesca.json.protocols.{RequestJson, ResponseJson}
 
 /**
   * Notes:
@@ -60,14 +60,7 @@ class RestService(val server: String, credentials: Option[BasicHttpCredentials] 
     // http://neo4j.com/docs/2.2.3/rest-api-streaming.html
     headers += RawHeader("X-Stream", "true")
 
-    //import SprayJsonSupport._
-    //import renesca.json.protocols.RequestJsonProtocol._
-
-    println("Should request")
     val json = RequestJson.jsonOf(jsonRequest)
-    println(json)
-
-    //val requestEntity = FormData(Map("name" -> "value")).toEntity
 
     val r = HttpRequest(
       method = HttpMethods.POST,
@@ -76,43 +69,30 @@ class RestService(val server: String, credentials: Option[BasicHttpCredentials] 
       entity = HttpEntity.Strict(MediaTypes.`application/json`, ByteString(json))
     )
     pipeline(r)
+  }
 
-
-    // @todo Philip .to[RequestEntity]
-    /*Marshal(jsonRequest).to[String].map( (e) => {
-      HttpRequest(
-        method = HttpMethods.POST,
-        uri = buildUri(path),
-        headers = headers.toList,
-        entity = ""
-      )
-    }).flatMap(pipeline)*/
+  def parseJson(jsonResponse: String): json.Response = {
+    ResponseJson.jsonToObject(jsonResponse)
   }
 
   private def awaitResponse(path: String, jsonRequest: json.Request): (List[HttpHeader], json.Response) = {
     val httpResponse = buildHttpPostRequest(path, jsonRequest)
 
-    val responseFuture = for (response <- httpResponse) yield (response)
-    val response = Await.result(responseFuture, timeout.duration)
-    response.entity.toStrict(10000 milliseconds).map((r) => {
-      println("RESPONSE")
-      println(r.toString())
-    })
-    // @todo Philip
-    import renesca.json.protocols.ResponseJsonProtocol._
-
-/*    val responseFuture = for (response <- httpResponse;
+    val responseFuture: Future[(Seq[HttpHeader],json.Response)] = for (response <- httpResponse;
                               // You can Unmarshal to a [String] if you want to see the JSON result
-                              jsonResponse <- Unmarshal(response.entity).to[json.Response]) yield (response.headers, jsonResponse)
+                              jsonResponse <- {
+                                val r = Unmarshal(response.entity).to[String]
+                                r
+                              }) yield (response.headers, parseJson({
+      jsonResponse
+    }))
 
     // Note the error handling is not consistent with the previous Spray code
     // case Left(deserializationError) => throw new RuntimeException(s"Deserialization Error: $deserializationError\n\n${ httpResponse.entity.asString }")
 
     // @todo Blocking is evil, return Future[_] rather than doing this
     val response = Await.result(responseFuture, timeout.duration)
-    (response._1.toList, response._2)*/
-
-    (List[HttpHeader](), null)
+    (response._1.toList, response._2)
   }
 
   def singleRequest(jsonRequest: json.Request): json.Response = {

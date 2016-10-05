@@ -1,7 +1,7 @@
 package renesca.json.protocols
 
 import org.json4s.native.Serialization
-import renesca.json.{Request, Statement}
+import renesca.json.{Request, Response, Statement}
 
 object ExampleJson {
 
@@ -251,7 +251,136 @@ hungriest: snake
 
 
 
+  def testIt() = {
 
+    implicit val formats = Serialization.formats(NoTypeHints) + new PropertyKeySerializer() + new ParameterValueSerializer() + new PropertyValueSerializer()
+
+    val json = """{
+                 |   "results":[
+                 |      {
+                 |         "columns":[
+                 |            "n",
+                 |            "r"
+                 |         ],
+                 |         "data":[
+                 |            {
+                 |               "graph":{
+                 |                  "nodes":[
+                 |                     {
+                 |                        "id":"183",
+                 |                        "labels":[
+                 |                           "ANIMAL"
+                 |                        ],
+                 |                        "properties":{
+                 |                           "name":"elefant"
+                 |                        }
+                 |                     }
+                 |                  ],
+                 |                  "relationships":[
+                 |
+                 |                  ]
+                 |               }
+                 |            },
+                 |            {
+                 |               "graph":{
+                 |                  "nodes":[
+                 |                     {
+                 |                        "id":"184",
+                 |                        "labels":[
+                 |                           "FOOD"
+                 |                        ],
+                 |                        "properties":{
+                 |                           "amount":2,
+                 |                           "name":"pizza"
+                 |                        }
+                 |                     }
+                 |                  ],
+                 |                  "relationships":[
+                 |
+                 |                  ]
+                 |               }
+                 |            },
+                 |            {
+                 |               "graph":{
+                 |                  "nodes":[
+                 |                     {
+                 |                        "id":"185",
+                 |                        "labels":[
+                 |                           "UUID",
+                 |                           "TAG"
+                 |                        ],
+                 |                        "properties":{
+                 |                           "name":"useful",
+                 |                           "uuid":"d4634268-76c0-4312-8345-6644fb8002eb"
+                 |                        }
+                 |                     }
+                 |                  ],
+                 |                  "relationships":[
+                 |
+                 |                  ]
+                 |               }
+                 |            },
+                 |            {
+                 |               "graph":{
+                 |                  "nodes":[
+                 |                     {
+                 |                        "id":"186",
+                 |                        "labels":[
+                 |                           "UUID",
+                 |                           "TAG"
+                 |                        ],
+                 |                        "properties":{
+                 |                           "name":"important",
+                 |                           "uuid":"79c9e6af-4ddd-44a6-a25c-64c0ca5542c4"
+                 |                        }
+                 |                     }
+                 |                  ],
+                 |                  "relationships":[
+                 |
+                 |                  ]
+                 |               }
+                 |            },
+                 |            {
+                 |               "graph":{
+                 |                  "nodes":[
+                 |                     {
+                 |                        "id":"187",
+                 |                        "labels":[
+                 |                           "UUID",
+                 |                           "ARTICLE",
+                 |                           "TIMESTAMP",
+                 |                           "TAGGABLE"
+                 |                        ],
+                 |                        "properties":{
+                 |                           "uuid":"cc7ecc0f-ae9e-4ade-8586-ccfa7287a4f3",
+                 |                           "content":"Some useful and important content",
+                 |                           "timestamp":1475577947491
+                 |                        }
+                 |                     }
+                 |                  ],
+                 |                  "relationships":[
+                 |
+                 |                  ]
+                 |               }
+                 |            }
+                 |         ]
+                 |      }
+                 |   ],
+                 |   "errors":[
+                 |
+                 |   ]
+                 |}""".stripMargin
+
+    val parsed = parse(json)
+
+    val response = parsed.extract[Response]
+
+    response.results.map( (r) => {
+      r.data
+    })
+
+    println(response)
+  }
 
 
   def classClassToJson() = {

@@ -125,9 +125,9 @@ class QueryPatterns(resolvedItems: mutable.Map[Item,Origin]) {
       val (pathQueries, pathSetters, pathParameters) = path.relations.zipWithIndex.map { case (relation, i) =>
         // a path assures that the start node was already matched by the previous relation (if there is one)
         val (_, startQuery, startSetter, startParameters, startVariable) = if(i == 0)
-                                                                             variableMap.get(relation.startNode).map(variable => ("", s"($variable)", "", Map.empty, variable)).getOrElse(nodePattern(relation.startNode, forDeletion))
-                                                                           else
-                                                                             ("", "", "", Map.empty, variableMap(relation.startNode))
+          variableMap.get(relation.startNode).map(variable => ("", s"($variable)", "", Map.empty, variable)).getOrElse(nodePattern(relation.startNode, forDeletion))
+        else
+          ("", "", "", Map.empty, variableMap(relation.startNode))
         val (_, endQuery, endSetter, endParameters, endVariable) = variableMap.get(relation.endNode).map(variable => ("", s"($variable)", "", Map.empty, variable)).getOrElse(nodePattern(relation.endNode, forDeletion))
         val (_, relQuery, relSetter, relParameters, relVariable) = relationPattern(relation, forDeletion)
         variableMap ++= Seq(relation.startNode -> startVariable, relation.endNode -> endVariable, relation -> relVariable)
@@ -228,7 +228,7 @@ class QueryGenerator {
         case r: Relation =>
           //TODO: invalidate Id origin of deleted item?
           if (!r.origin.isLocal) { // if not local we can match by id and have a simpler query
-            val (keyword, query, postfix, parameters, variable) = qPatterns.relationPattern(r,  forDeletion =true)
+          val (keyword, query, postfix, parameters, variable) = qPatterns.relationPattern(r,  forDeletion =true)
             QueryConfig(r, Query(s"$keyword ()-$query-() $postfix delete $variable", parameters))
           } else {
             val (queryPattern, variable, params) = qPatterns.queryRelationPattern(r, forDeletion = true)
@@ -474,13 +474,13 @@ class QueryBuilder {
     // matched via their merge properties, so we can delete them like match
     // items.
     deleteItems.foreach( item => item.origin = item.origin match {
-        case Merge(merge, _) => Match(merge)
-        case other           => other
+      case Merge(merge, _) => Match(merge)
+      case other           => other
     })
 
     deletePaths.foreach( item => item.origin = item.origin match {
-        case Merge(merge, _) => Match(merge)
-        case other           => other
+      case Merge(merge, _) => Match(merge)
+      case other           => other
     })
 
     checkChanges(changes, deleteItems, deletePaths, addPaths, addLocalProducePaths, addRelations) match {
