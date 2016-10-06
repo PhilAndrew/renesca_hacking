@@ -562,33 +562,31 @@ class QueryBuilder {
   }
 
   def applyQueries(queryRequests: Seq[() => Seq[QueryConfig]], queryHandler: (Seq[Query]) => Future[Seq[(Graph, Table)]]): Future[Option[String]] = {
-
-    // @todo Is this the most efficient way to execute the queries? do the queries need to execute in sequence or could they be applied in parallel or other?
-
-    // http://stackoverflow.com/questions/25056957/why-future-sequence-executes-my-futures-in-parallel-rather-than-in-series
-    implicit class SeqExtension[A](s: Seq[A]) {
-      def foldLeftToFuture[B](initial: B)(f: (B, A) => Future[B])(implicit ec: ExecutionContext): Future[B] =
-        s.foldLeft(Future(initial))((future, item) => future.flatMap(f(_, item)))
-
-      def mapInSeries[B](f: A => Future[B])(implicit ec: ExecutionContext): Future[Seq[B]] =
-        s.foldLeftToFuture(Seq[B]())((seq, item) => f(item).map(seq :+ _))
-    }
-
-    // Here we execute the statements in sequence by joining the futures together.
-    val what: Future[Seq[Seq[_]]] = queryRequests.view.mapInSeries[Seq[_]](getter => {
+    val handles = queryRequests.view.flatMap(getter => {
       val configs = getter()
       if (configs.isEmpty)
-        Future.successful(Seq.empty) // @todo PHILIP is successful right?
+        Seq.empty
       else {
         val (queries, callbacks) = configs.map(c => (c.query, c.callback)).unzip
-        val queryFuture = queryHandler(queries)
-        val futureSeq: Future[Seq[_]] = queryFuture.map( (q) => q.zip(callbacks).view.map { case ((g, t), f) => f(g, t) })
-        futureSeq
+        import scala.concurrent.duration._
+        Await.result(queryHandler(queries), 10000 milliseconds).zip(callbacks).view.map { case ((g, t), f) => f(g, t) }
       }
     })
 
-    // @todo PHILIP Handle the error cases
+    var failure: Option[String] = None
+    val successHandles = handles.takeWhile(h => {
+      failure = h.left.toOption
+      failure.isEmpty
+    }).force
 
-    what.map(f => None)
+    if(failure.isEmpty)
+      successHandles.foreach(_.right.get())
+
+    println("############################################################################################################")
+    println("There are n query requests " + queryRequests.size)
+    println("The result from apply queries")
+    println(failure.toString)
+
+    Future.successful(failure)
   }
 }

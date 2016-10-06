@@ -92,7 +92,7 @@ object TestRenescaApp2 extends App {
         zoo.add(Eats.create(elefant, pizza))
         zoo.animals // Set(elefant)
         zoo.relations // Set(elefant eats pizza)
-        db.persistChanges(zoo)
+        Await.result(db.persistChanges(zoo), 10000 milliseconds)
         println("Should have added a relationship between ..........................................................................")
       }
 
@@ -177,7 +177,7 @@ object TestRenescaApp2 extends App {
         val initGraph = Blog.empty
         initGraph.add(Tag.create(name = "useful"))
         initGraph.add(Tag.create(name = "important"))
-        db.persistChanges(initGraph)
+        Await.result(db.persistChanges(initGraph), 10000 milliseconds)
 
         val blog = Blog.empty
 
@@ -197,7 +197,7 @@ object TestRenescaApp2 extends App {
         blog.taggables // Set(article)
         article.rev_categorizes // blog.tags
 
-        db.persistChanges(blog)
+        Await.result(db.persistChanges(blog), 10000 milliseconds)
       }
 
       {

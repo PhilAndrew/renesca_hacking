@@ -58,6 +58,11 @@ class RestService(val server: String, credentials: Option[BasicHttpCredentials] 
 
     val json = RequestJson.jsonOf(jsonRequest)
 
+    val i = scala.util.Random.nextInt()
+    println("")
+    println(i.toString + " " + "JSON request ")
+    println(i.toString + " " + json)
+
     val request = HttpRequest(
       method = HttpMethods.POST,
       uri = buildUri(path),
@@ -75,7 +80,15 @@ class RestService(val server: String, credentials: Option[BasicHttpCredentials] 
     val httpResponse = buildHttpPostRequest(path, jsonRequest)
 
     val responseFuture: Future[(Seq[HttpHeader],json.Response)] = for (response <- httpResponse;
-                              jsonResponse <- Unmarshal(response.entity).to[String]) yield (response.headers, parseJson(jsonResponse))
+                              jsonResponse <- Unmarshal(response.entity).to[String]) yield (response.headers, {
+
+      val i = scala.util.Random.nextInt()
+      println("")
+      println(i.toString + " " + "JSON response ")
+      println(i.toString + " " + jsonResponse)
+
+      parseJson(jsonResponse)
+    })
 
     // @todo Note the error handling is not consistent with the previous Spray code
     // case Left(deserializationError) => throw new RuntimeException(s"Deserialization Error: $deserializationError\n\n${ httpResponse.entity.asString }")
