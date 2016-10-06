@@ -562,31 +562,26 @@ class QueryBuilder {
   }
 
   def applyQueries(queryRequests: Seq[() => Seq[QueryConfig]], queryHandler: (Seq[Query]) => Future[Seq[(Graph, Table)]]): Future[Option[String]] = {
-    val handles = queryRequests.view.flatMap(getter => {
-      val configs = getter()
-      if (configs.isEmpty)
-        Seq.empty
-      else {
+
+    import scala.concurrent.ExecutionContext.Implicits.global
+
+    implicit class SeqExtension[A](s: Seq[A]) {
+      def foldLeftToFuture[B](initial: B)(f: (B, A) => Future[B])(implicit ec: ExecutionContext): Future[B] =
+        s.foldLeft(Future(initial))((future, item) => future.flatMap(f(_, item)))
+
+      def mapInSeries[B](f: A => Future[B])(implicit ec: ExecutionContext): Future[Seq[B]] =
+        s.foldLeftToFuture(Seq[B]())((seq, item) => f(item).map(seq :+ _))
+    }
+
+    val future = queryRequests.mapInSeries( (f) => {
+      val configs = f()
+      if (configs.isEmpty) Future.successful(Seq.empty) else {
         val (queries, callbacks) = configs.map(c => (c.query, c.callback)).unzip
-        import scala.concurrent.duration._
-        Await.result(queryHandler(queries), 10000 milliseconds).zip(callbacks).view.map { case ((g, t), f) => f(g, t) }
+        for (q <- queryHandler(queries)) yield (q.zip(callbacks).map { case ((g, t), f) => f(g, t) })
       }
     })
+    future.map((it)=>None)
 
-    var failure: Option[String] = None
-    val successHandles = handles.takeWhile(h => {
-      failure = h.left.toOption
-      failure.isEmpty
-    }).force
-
-    if(failure.isEmpty)
-      successHandles.foreach(_.right.get())
-
-    println("############################################################################################################")
-    println("There are n query requests " + queryRequests.size)
-    println("The result from apply queries")
-    println(failure.toString)
-
-    Future.successful(failure)
   }
+
 }
