@@ -6,7 +6,8 @@ import renesca.parameter.implicits._
 import renesca.table.Table
 
 import scala.collection.{SeqView, mutable}
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.ExecutionContext.Implicits.global
 
 case class QueryConfig(item: SubGraph, query: Query, callback: (Graph, Table) => Either[String, () => Any] = (graph: Graph, table: Table) => Right(() => ()))
 
@@ -561,30 +562,33 @@ class QueryBuilder {
   }
 
   def applyQueries(queryRequests: Seq[() => Seq[QueryConfig]], queryHandler: (Seq[Query]) => Future[Seq[(Graph, Table)]]): Future[Option[String]] = {
-    // @todo PHILIP do this one?
 
-    val handles: SeqView[Future[Seq[_]], Seq[_]] = queryRequests.view.map(getter => {
+    // @todo Is this the most efficient way to execute the queries? do the queries need to execute in sequence or could they be applied in parallel or other?
+
+    // http://stackoverflow.com/questions/25056957/why-future-sequence-executes-my-futures-in-parallel-rather-than-in-series
+    implicit class SeqExtension[A](s: Seq[A]) {
+      def foldLeftToFuture[B](initial: B)(f: (B, A) => Future[B])(implicit ec: ExecutionContext): Future[B] =
+        s.foldLeft(Future(initial))((future, item) => future.flatMap(f(_, item)))
+
+      def mapInSeries[B](f: A => Future[B])(implicit ec: ExecutionContext): Future[Seq[B]] =
+        s.foldLeftToFuture(Seq[B]())((seq, item) => f(item).map(seq :+ _))
+    }
+
+    // Here we execute the statements in sequence by joining the futures together.
+    val what: Future[Seq[Seq[_]]] = queryRequests.view.mapInSeries[Seq[_]](getter => {
       val configs = getter()
       if (configs.isEmpty)
-        Future.successful(Seq.empty) // @todo successful?
+        Future.successful(Seq.empty) // @todo PHILIP is successful right?
       else {
         val (queries, callbacks) = configs.map(c => (c.query, c.callback)).unzip
         val queryFuture = queryHandler(queries)
-        val d: Future[Seq[_]] = queryFuture.map( (q) => q.zip(callbacks).view.map { case ((g, t), f) => f(g, t) })
-        d
-        //q.zip(callbacks).view.map { case ((g, t), f) => f(g, t) }
+        val futureSeq: Future[Seq[_]] = queryFuture.map( (q) => q.zip(callbacks).view.map { case ((g, t), f) => f(g, t) })
+        futureSeq
       }
     })
 
-    var failure: Option[String] = None
-    val successHandles = handles.takeWhile(h => {
-      failure = h.left.toOption
-      failure.isEmpty
-    }).force
+    // @todo PHILIP Handle the error cases
 
-    if(failure.isEmpty)
-      successHandles.foreach(_.right.get())
-
-    Future.successful(failure)
+    what.map(f => None)
   }
 }

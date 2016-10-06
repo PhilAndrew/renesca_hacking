@@ -113,7 +113,6 @@ trait QueryHandler extends QueryInterface {
   }
 
   override def queryGraphsAndTables(queries: Query*): Future[Seq[(Graph, Table)]] = {
-    // @todo PHILIP is this valid because there is a zip???
     for (results <- executeQueries(queries, List("row", "graph"))) yield extractGraphs(results) zip extractTables(results)
   }
 
@@ -200,13 +199,13 @@ class Transaction extends QueryHandler { thisTransaction =>
     if (exceptions.isDefined) {
       rollback()
       Future.failed(exceptions.get)
-    } else Future.successful()
+    } else Future.successful(Unit)
   }
 
   def rollback(): Future[Unit] = {
     val future = id match {
       case Some(transactionId) => restService.rollbackTransaction(transactionId)
-      case None => Future.successful()
+      case None => Future.successful(Unit)
     }
     for (f <- future) yield invalidate()
   }
@@ -227,7 +226,7 @@ class Transaction extends QueryHandler { thisTransaction =>
         for (jsonResponse <- restService.commitTransaction(transactionId);
              e <- handleError(exceptionFromErrors(jsonResponse))) yield invalidate()
       } else
-      Future.successful()
+      Future.successful(Unit)
     }
 
     override protected def queryService(jsonRequest: json.Request): Future[json.Response] = {
@@ -269,7 +268,7 @@ class DbService extends QueryHandler {
     if (exceptions.isDefined)
       Future.failed(exceptions.get)
     else
-      Future.successful()
+      Future.successful(Unit)
 
     //for (exception <- exceptions)
     //  throw exception
